@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+function .main() {
+  return 0
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  set -e
+  .main $@
+fi
