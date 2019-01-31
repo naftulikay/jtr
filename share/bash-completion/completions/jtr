@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+_jtr_completions() {
+  # important variables
+  #
+  #   - COMP_WORDS: array of basically argv, can contain empty args
+  #   - COMP_CWORD: index to the current argument being edited
+  #   - COMPREPLY: an array of completions to return
+  #
+  function _join_by() {
+    local IFS="$1" && shift && echo "$*"
+  }
+
+  local argv=() argc="${#COMP_WORDS[@]}" cword="${COMP_CWORD}"
+
+  # NOTE: seq starts with _1_ by default, so force zero
+  for i in $(seq 0 $((${#COMP_WORDS[@]} - 1))); do
+    argv+=("${COMP_WORDS[$i]}")
+  done
+
+  # determine which flags and options have already been passed
+  local has_help=n has_device=n has_no_eject=n has_label=n has_output_file=n
+  for i in $(seq 1 $argc) ; do
+    local arg="${argv[$i]}"
+
+    case "$arg" in
+      -h|--help)
+        has_help=y
+        ;;
+      -i|--device)
+        has_device=y
+        ;;
+      --no-eject)
+        has_no_eject=y
+        ;;
+      -l|--label)
+        has_label=y
+        ;;
+    esac
+  done
+
+  local last_arg="${argv[$(( $argc - 1 ))]}"
+
+  if [ "$last_arg" != "jtr" ] && ! echo "$last_arg" | grep -qP '^[-]{1,2}' ; then
+    # FIXME parsing of the output file is hard; we'd basically need to reimplement argument parsing here in
+    #       the completion file, which would be a lot of duplicated work
+    has_output_file=n
+  fi
+
+  # establish reply
+  COMPREPLY=()
+
+  # if help has been passed, no other arguments matter
+  if [ "$has_help" == "y" ]; then
+    return 0
+  fi
+
+  # build a list of available flags
+  local available_opts=()
+
+  if [ "$cword" -le 1 ]; then
+    test "$has_output_file" == "n" && COMPREPLY+=($(compgen -f -- "${argv[$cword]}"))
+    test "$has_device"      == "n" && available_opts+=("-i" "--device")
+    test "$has_no_eject"    == "n" && available_opts+=("--no-eject")
+    test "$has_label"       == "n" && available_opts+=("-l" "--label")
+  else
+    # we need to be context aware, what was the previous argument?
+    local previous_arg="${argv[$(($cword - 1))]}"
+
+    if [ "$previous_arg" == "-i" -o "$previous_arg" == "--device" ]; then
+      # do file completion for dvd input device
+      COMPREPLY+=($(compgen -f -- "${argv[$cword]}"))
+    elif [ "$previous_arg" == "-l" -o "$previous_arg" == "--label" ]; then
+      # no completion to offer for now, future possibly use blkid to complete the disk name
+      true
+    else
+      # only other flags have no parameters
+      test "$has_output_file" == "n" && COMPREPLY+=($(compgen -f -- "${argv[$cword]}"))
+      test "$has_device"      == "n" && available_opts+=("-i" "--device")
+      test "$has_no_eject"    == "n" && available_opts+=("--no-eject")
+      test "$has_label"       == "n" && available_opts+=("-l" "--label")
+    fi
+  fi
+
+  if [ "${#available_opts[@]}" -gt 0 ]; then
+    COMPREPLY+=(
+      $(compgen -W "$(_join_by "$IFS" ${available_opts[@]})" -- "${argv[$cword]}")
+    )
+  fi
+}
+
+# flags in detail:
+#   -o filenames:   Properly escape filenames with quotes.
+#   -o nospace:     When working with directories, don't append a space automatically after the directory slash
+#   -o bashdefault: Use Bash's default completions for variable names, etc.
+#   -F...:          Use the _jtr_completions function to generate completions
+complete -o filenames -o nospace -o bashdefault -F _jtr_completions jtr

@@ -1,0 +1,15 @@
+Package: jtr
+Version: 1.0.0-1
+Architecture: all
+Section: universe/utils
+Priority: optional
+Homepage: https://github.com/naftulikay/jtr
+Origin: GitHub
+Maintainer: Naftuli Kay <me@naftuli.wtf>
+Bugs: https://github.com/naftulikay/jtr/issues
+Depends: genisoimage, dvdbackup, eject
+Recommends: libdvdcss2
+Description:
+  jtr is a utility for converting a DVD disk into an ISO-9660 image on the filesystem.
+  jtr contains no proprietary or copyrighted code and depends on other libraries to
+  provide DVD playback and backup.
